@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Search, MapPin, Calendar, Users, Car, Bike, Truck, Star, Clock, ArrowRight } from 'lucide-react'
+import { Search, MapPin, Car, Bike, Truck, Star, Clock } from 'lucide-react'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import { Ride, VehicleType } from '../types'

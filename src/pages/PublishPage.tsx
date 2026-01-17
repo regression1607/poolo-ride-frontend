@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MapPin, Clock, Car, Bike, Truck, DollarSign, FileText, ChevronLeft, ChevronRight, Check } from 'lucide-react'
+import { MapPin, Car, Bike, Truck, DollarSign, FileText, ChevronLeft, ChevronRight, Check } from 'lucide-react'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import { VehicleType } from '../types'
