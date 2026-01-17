@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Search, MapPin, Car, Bike, Truck, Star, Clock } from 'lucide-react'
+import { Search, Car, Bike, Truck, Star, Clock } from 'lucide-react'
 import Button from '../components/ui/Button'
-import Input from '../components/ui/Input'
+import LocationPicker from '../components/LocationPicker'
 import { Ride, VehicleType } from '../types'
 import { ridesApi, bookingsApi } from '../services/api'
 import { useAuthStore } from '../store/authStore'
@@ -164,18 +164,18 @@ export default function SearchPage() {
         </div>
 
         <div className="space-y-4">
-          <Input
+          <LocationPicker
             placeholder="From: Pickup location"
             value={fromLocation}
-            onChange={(e) => setFromLocation(e.target.value)}
-            leftIcon={MapPin}
+            onChange={(location) => setFromLocation(location)}
+            icon="pickup"
           />
 
-          <Input
+          <LocationPicker
             placeholder="To: Drop location"
             value={toLocation}
-            onChange={(e) => setToLocation(e.target.value)}
-            leftIcon={MapPin}
+            onChange={(location) => setToLocation(location)}
+            icon="drop"
           />
 
           {/* Date Selection */}
@@ -212,7 +212,7 @@ export default function SearchPage() {
             <label className="block text-sm font-medium text-neutral-700 mb-2">
               Seats needed
             </label>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center justify-center gap-4">
               <button
                 onClick={() => setSeatsNeeded(Math.max(1, seatsNeeded - 1))}
                 className="w-10 h-10 rounded-full border border-neutral-300 flex items-center justify-center text-lg font-semibold hover:bg-neutral-50"

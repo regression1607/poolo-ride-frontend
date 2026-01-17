@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { MapPin, Car, Bike, Truck, DollarSign, FileText, ChevronLeft, ChevronRight, Check } from 'lucide-react'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
+import LocationPicker from '../components/LocationPicker'
 import { VehicleType } from '../types'
 import { ridesApi } from '../services/api'
 
@@ -118,18 +119,18 @@ export default function PublishPage() {
               <p className="text-neutral-600">Select your pickup and drop-off locations</p>
             </div>
 
-            <Input
+            <LocationPicker
               placeholder="From: Your starting point"
               value={formData.fromLocation}
-              onChange={(e) => updateFormData('fromLocation', e.target.value)}
-              leftIcon={MapPin}
+              onChange={(location) => updateFormData('fromLocation', location)}
+              icon="pickup"
             />
 
-            <Input
+            <LocationPicker
               placeholder="To: Your destination"
               value={formData.toLocation}
-              onChange={(e) => updateFormData('toLocation', e.target.value)}
-              leftIcon={MapPin}
+              onChange={(location) => updateFormData('toLocation', location)}
+              icon="drop"
             />
 
             {formData.fromLocation && formData.toLocation && (

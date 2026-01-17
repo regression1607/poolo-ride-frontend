@@ -62,6 +62,7 @@ export default {
         'fade-in': 'fadeIn 0.8s ease-out forwards',
         'slide-in-right': 'slideInRight 0.8s ease-out forwards',
         'bounce-slow': 'bounceSlow 3s ease-in-out infinite',
+        'slide-up': 'slideUp 0.3s ease-out forwards',
       },
       keyframes: {
         fadeIn: {
@@ -75,6 +76,10 @@ export default {
         bounceSlow: {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-10px)' },
+        },
+        slideUp: {
+          '0%': { opacity: '0', transform: 'translateY(100%)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
       },
     },
