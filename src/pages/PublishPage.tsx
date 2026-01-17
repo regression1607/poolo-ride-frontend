@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MapPin, Car, Bike, Truck, DollarSign, FileText, ChevronLeft, ChevronRight, Check } from 'lucide-react'
+import { MapPin, Car, Bike, Truck, IndianRupee, FileText, ChevronLeft, ChevronRight, Check, Clock, AlertCircle, ChevronDown } from 'lucide-react'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import LocationPicker from '../components/LocationPicker'
@@ -13,31 +13,81 @@ const vehicleTypes: { type: VehicleType; label: string; icon: any }[] = [
   { type: 'cab', label: 'Cab', icon: Truck },
 ]
 
-const hours = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'))
-const minutes = ['00', '15', '30', '45']
+const ALL_HOURS = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'))
+const ALL_MINUTES = ['00', '15', '30', '45']
 
 export default function PublishPage() {
   const navigate = useNavigate()
   const [currentStep, setCurrentStep] = useState(1)
   const [isPublishing, setIsPublishing] = useState(false)
 
+  // Initialize with a time that's at least 30 mins from now
+  const getInitialTime = () => {
+    const now = new Date()
+    now.setMinutes(now.getMinutes() + 30)
+    let hour = now.getHours()
+    const minute = Math.ceil(now.getMinutes() / 15) * 15
+    const period = hour >= 12 ? 'PM' : 'AM'
+    if (hour > 12) hour -= 12
+    if (hour === 0) hour = 12
+    return {
+      hour: hour.toString().padStart(2, '0'),
+      minute: (minute === 60 ? 0 : minute).toString().padStart(2, '0'),
+      period: period as 'AM' | 'PM'
+    }
+  }
+
+  const initialTime = getInitialTime()
+
   const [formData, setFormData] = useState({
     fromLocation: '',
     toLocation: '',
     selectedDate: 'today' as 'today' | 'tomorrow',
-    hour: '12',
-    minute: '00',
-    period: 'PM' as 'AM' | 'PM',
+    hour: initialTime.hour,
+    minute: initialTime.minute,
+    period: initialTime.period,
     availableSeats: 2,
     vehicleType: 'car' as VehicleType,
     pricePerSeat: '',
     description: '',
   })
 
+  const [timeError, setTimeError] = useState('')
+
   const totalSteps = 4
 
   const updateFormData = (key: string, value: any) => {
     setFormData((prev) => ({ ...prev, [key]: value }))
+    if (['hour', 'minute', 'period', 'selectedDate'].includes(key)) {
+      setTimeError('')
+    }
+  }
+
+  // Check if selected time is valid (at least 30 mins in future)
+  const isTimeValid = useMemo(() => {
+    const now = new Date()
+    const selectedDate = new Date()
+    
+    if (formData.selectedDate === 'tomorrow') {
+      selectedDate.setDate(selectedDate.getDate() + 1)
+      return true // Tomorrow is always valid
+    }
+
+    let hour = parseInt(formData.hour)
+    if (formData.period === 'PM' && hour !== 12) hour += 12
+    if (formData.period === 'AM' && hour === 12) hour = 0
+    
+    selectedDate.setHours(hour, parseInt(formData.minute), 0, 0)
+    
+    const minTime = new Date(now.getTime() + 30 * 60 * 1000) // 30 mins from now
+    return selectedDate >= minTime
+  }, [formData.hour, formData.minute, formData.period, formData.selectedDate])
+
+  // Get minimum allowed time for today
+  const getMinTimeForToday = () => {
+    const now = new Date()
+    now.setMinutes(now.getMinutes() + 30)
+    return now
   }
 
   const getPickupTime = () => {
@@ -73,6 +123,12 @@ export default function PublishPage() {
       case 1:
         if (!formData.fromLocation || !formData.toLocation) {
           alert('Please enter both pickup and drop locations')
+          return false
+        }
+        return true
+      case 2:
+        if (!isTimeValid) {
+          setTimeError('Please select a time at least 30 minutes from now')
           return false
         }
         return true
@@ -155,57 +211,99 @@ export default function PublishPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">Select Date</label>
+              <label className="block text-sm font-medium text-neutral-700 mb-3">Select Date</label>
               <div className="grid grid-cols-2 gap-3">
-                {(['today', 'tomorrow'] as const).map((date) => (
-                  <button
-                    key={date}
-                    onClick={() => updateFormData('selectedDate', date)}
-                    className={`py-3 px-4 rounded-xl border text-center font-medium transition-colors ${
-                      formData.selectedDate === date
-                        ? 'border-primary-main bg-primary-100 text-primary-main'
-                        : 'border-neutral-300 text-neutral-700 hover:bg-neutral-50'
-                    }`}
-                  >
-                    {date === 'today' ? 'Today' : 'Tomorrow'}
-                  </button>
-                ))}
+                {(['today', 'tomorrow'] as const).map((date) => {
+                  const isToday = date === 'today'
+                  const dateObj = new Date()
+                  if (!isToday) dateObj.setDate(dateObj.getDate() + 1)
+                  const dayName = isToday ? 'Today' : 'Tomorrow'
+                  const dateStr = dateObj.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+                  
+                  return (
+                    <button
+                      key={date}
+                      onClick={() => updateFormData('selectedDate', date)}
+                      className={`py-4 px-4 rounded-xl border text-center transition-all ${
+                        formData.selectedDate === date
+                          ? 'border-primary-main bg-primary-50 ring-2 ring-primary-main/20'
+                          : 'border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'
+                      }`}
+                    >
+                      <p className={`font-semibold ${
+                        formData.selectedDate === date ? 'text-primary-main' : 'text-neutral-900'
+                      }`}>{dayName}</p>
+                      <p className="text-sm text-neutral-500 mt-0.5">{dateStr}</p>
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">Select Time</label>
-              <div className="grid grid-cols-3 gap-3">
-                <select
+              <label className="block text-sm font-medium text-neutral-700 mb-3">Select Time</label>
+              <div className="flex items-center justify-center gap-2">
+                {/* Hour */}
+                <TimeDropdown
                   value={formData.hour}
-                  onChange={(e) => updateFormData('hour', e.target.value)}
-                  className="py-3 px-4 rounded-xl border border-neutral-300 text-center font-medium"
-                >
-                  {hours.map((h) => (
-                    <option key={h} value={h}>{h}</option>
-                  ))}
-                </select>
-                <select
+                  options={ALL_HOURS}
+                  onChange={(val) => updateFormData('hour', val)}
+                />
+
+                <span className="text-2xl font-bold text-neutral-400">:</span>
+
+                {/* Minute */}
+                <TimeDropdown
                   value={formData.minute}
-                  onChange={(e) => updateFormData('minute', e.target.value)}
-                  className="py-3 px-4 rounded-xl border border-neutral-300 text-center font-medium"
-                >
-                  {minutes.map((m) => (
-                    <option key={m} value={m}>{m}</option>
+                  options={ALL_MINUTES}
+                  onChange={(val) => updateFormData('minute', val)}
+                />
+
+                {/* AM/PM Toggle */}
+                <div className="flex rounded-xl border border-neutral-200 overflow-hidden ml-2">
+                  {(['AM', 'PM'] as const).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => updateFormData('period', p)}
+                      className={`px-4 py-3 font-semibold text-sm transition-colors ${
+                        formData.period === p
+                          ? 'bg-primary-main text-white'
+                          : 'bg-white text-neutral-600 hover:bg-neutral-50'
+                      }`}
+                    >
+                      {p}
+                    </button>
                   ))}
-                </select>
-                <select
-                  value={formData.period}
-                  onChange={(e) => updateFormData('period', e.target.value)}
-                  className="py-3 px-4 rounded-xl border border-neutral-300 text-center font-medium"
-                >
-                  <option value="AM">AM</option>
-                  <option value="PM">PM</option>
-                </select>
+                </div>
               </div>
-              <p className="mt-2 text-center text-lg font-semibold text-neutral-900">
-                {formData.hour}:{formData.minute} {formData.period}
-              </p>
+
+              {/* Time Display */}
+              <div className={`mt-4 p-4 rounded-xl flex items-center justify-center gap-3 ${
+                isTimeValid ? 'bg-green-50' : 'bg-red-50'
+              }`}>
+                <Clock className={`w-5 h-5 ${isTimeValid ? 'text-green-600' : 'text-red-500'}`} />
+                <span className={`text-lg font-semibold ${
+                  isTimeValid ? 'text-green-700' : 'text-red-600'
+                }`}>
+                  {formData.hour}:{formData.minute} {formData.period}
+                </span>
+                {!isTimeValid && formData.selectedDate === 'today' && (
+                  <span className="text-sm text-red-500">(too soon)</span>
+                )}
+              </div>
+
+              {/* Error/Info Message */}
+              {timeError && (
+                <div className="mt-3 flex items-center gap-2 text-red-500 text-sm">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>{timeError}</span>
+                </div>
+              )}
+              {formData.selectedDate === 'today' && !timeError && (
+                <p className="mt-3 text-center text-sm text-neutral-500">
+                  Minimum departure: {getMinTimeForToday().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                </p>
+              )}
             </div>
           </div>
         )
@@ -267,7 +365,7 @@ export default function PublishPage() {
               placeholder="e.g., 150"
               value={formData.pricePerSeat}
               onChange={(e) => updateFormData('pricePerSeat', e.target.value)}
-              leftIcon={DollarSign}
+              leftIcon={IndianRupee}
             />
 
             <Input
@@ -365,6 +463,64 @@ export default function PublishPage() {
           </>
         )}
       </Button>
+    </div>
+  )
+}
+
+function TimeDropdown({ 
+  value, 
+  options, 
+  onChange 
+}: { 
+  value: string
+  options: string[]
+  onChange: (val: string) => void 
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-20 py-3 px-4 rounded-xl border border-neutral-200 bg-white text-center font-semibold text-lg focus:outline-none focus:ring-2 focus:ring-primary-main/20 focus:border-primary-main cursor-pointer flex items-center justify-center gap-1"
+      >
+        {value}
+        <ChevronDown className={`w-4 h-4 text-neutral-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 w-20 bg-white border border-neutral-200 rounded-xl shadow-lg z-50 py-1 max-h-48 overflow-y-auto">
+          {options.map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => {
+                onChange(option)
+                setIsOpen(false)
+              }}
+              className={`w-full py-2 px-3 text-center font-medium transition-colors ${
+                value === option
+                  ? 'bg-primary-100 text-primary-main'
+                  : 'text-neutral-700 hover:bg-neutral-50'
+              }`}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

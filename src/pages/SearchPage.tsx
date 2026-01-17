@@ -1,10 +1,33 @@
-import { useState } from 'react'
-import { Search, Car, Bike, Truck, Star, Clock } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Search, Car, Bike, Truck, Star, Clock, CheckCircle, Filter } from 'lucide-react'
 import Button from '../components/ui/Button'
 import LocationPicker from '../components/LocationPicker'
-import { Ride, VehicleType } from '../types'
+import { Ride, VehicleType, RideBooking } from '../types'
 import { ridesApi, bookingsApi } from '../services/api'
 import { useAuthStore } from '../store/authStore'
+
+// Distance filter options in km
+const DISTANCE_FILTERS = [
+  { value: 1, label: '1 km' },
+  { value: 5, label: '5 km' },
+  { value: 10, label: '10 km' },
+  { value: 20, label: '20 km' },
+  { value: 50, label: '50 km' },
+]
+
+// Haversine formula to calculate distance between two coordinates
+function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371 // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLon = (lon2 - lon1) * Math.PI / 180
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c
+}
 
 const vehicleTypes: { type: VehicleType | 'all'; label: string; icon: any }[] = [
   { type: 'all', label: 'All', icon: Car },
@@ -20,16 +43,39 @@ const popularRoutes = [
 ]
 
 export default function SearchPage() {
+  const navigate = useNavigate()
   const { user } = useAuthStore()
   const [fromLocation, setFromLocation] = useState('')
+  const [fromCoords, setFromCoords] = useState<{ lat: number; lng: number } | null>(null)
   const [toLocation, setToLocation] = useState('')
+  const [toCoords, setToCoords] = useState<{ lat: number; lng: number } | null>(null)
   const [selectedDate, setSelectedDate] = useState<'today' | 'tomorrow'>('today')
   const [seatsNeeded, setSeatsNeeded] = useState(1)
   const [vehicleType, setVehicleType] = useState<VehicleType | 'all'>('all')
+  const [distanceFilter, setDistanceFilter] = useState(5) // Default 5km
   const [searchResults, setSearchResults] = useState<Ride[]>([])
   const [showResults, setShowResults] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [bookingRideId, setBookingRideId] = useState<string | null>(null)
+  const [userBookings, setUserBookings] = useState<RideBooking[]>([])
+  const [showDistanceFilter, setShowDistanceFilter] = useState(false)
+
+  // Fetch user's bookings on mount
+  useEffect(() => {
+    if (user) {
+      bookingsApi.getMyBookings()
+        .then(setUserBookings)
+        .catch(console.error)
+    }
+  }, [user])
+
+  // Check if user has booked a specific ride
+  const hasBookedRide = (rideId: string) => {
+    return userBookings.some(
+      (booking) => booking.ride_id === rideId && 
+      ['pending', 'confirmed'].includes(booking.booking_status)
+    )
+  }
 
   const handleSearch = async () => {
     if (!fromLocation || !toLocation) {
@@ -40,14 +86,41 @@ export default function SearchPage() {
     setIsLoading(true)
     try {
       const rides = await ridesApi.getAvailable()
-      // Filter rides client-side for now
+      
+      // Filter rides based on criteria
       const filtered = rides.filter((ride) => {
         const matchesVehicle = vehicleType === 'all' || ride.vehicle_type === vehicleType
         const matchesSeats = ride.available_seats >= seatsNeeded
-        const matchesFrom = ride.pickup_address.toLowerCase().includes(fromLocation.toLowerCase())
-        const matchesTo = ride.drop_address.toLowerCase().includes(toLocation.toLowerCase())
-        return matchesVehicle && matchesSeats && (matchesFrom || matchesTo || !fromLocation)
+        
+        // Distance-based filtering if coordinates available
+        let matchesPickup = true
+        let matchesDrop = true
+        
+        if (fromCoords && ride.pickup_latitude && ride.pickup_longitude) {
+          const pickupDistance = getDistanceKm(
+            fromCoords.lat, fromCoords.lng,
+            ride.pickup_latitude, ride.pickup_longitude
+          )
+          matchesPickup = pickupDistance <= distanceFilter
+        } else {
+          // Fallback to text matching
+          matchesPickup = ride.pickup_address.toLowerCase().includes(fromLocation.toLowerCase().split(',')[0])
+        }
+        
+        if (toCoords && ride.drop_latitude && ride.drop_longitude) {
+          const dropDistance = getDistanceKm(
+            toCoords.lat, toCoords.lng,
+            ride.drop_latitude, ride.drop_longitude
+          )
+          matchesDrop = dropDistance <= distanceFilter
+        } else {
+          // Fallback to text matching
+          matchesDrop = ride.drop_address.toLowerCase().includes(toLocation.toLowerCase().split(',')[0])
+        }
+        
+        return matchesVehicle && matchesSeats && matchesPickup && matchesDrop
       })
+      
       setSearchResults(filtered)
       setShowResults(true)
     } catch (error) {
@@ -66,13 +139,15 @@ export default function SearchPage() {
 
     setBookingRideId(ride.id)
     try {
-      await bookingsApi.create({
+      // Backend automatically sends booking notification to driver
+      const booking = await bookingsApi.create({
         ride_id: ride.id,
         seats_booked: seatsNeeded,
       })
-      alert(`Successfully booked ${seatsNeeded} seat(s) for ₹${ride.price_per_seat * seatsNeeded}!`)
-      // Refresh search results
-      handleSearch()
+      // Update local bookings state
+      setUserBookings((prev) => [...prev, booking])
+      // Redirect to My Rides page with booked tab
+      navigate('/rides?tab=booked')
     } catch (error: any) {
       alert(error.response?.data?.message || 'Failed to book ride')
     } finally {
@@ -112,11 +187,42 @@ export default function SearchPage() {
           </div>
         </div>
 
-        {/* Results Stats */}
+        {/* Results Stats & Filter */}
         <div className="flex justify-between items-center mb-4">
           <p className="font-semibold text-neutral-900">
             {searchResults.length} ride{searchResults.length !== 1 ? 's' : ''} found
           </p>
+          <div className="relative">
+            <button
+              onClick={() => setShowDistanceFilter(!showDistanceFilter)}
+              className="flex items-center gap-2 px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+            >
+              <Filter className="w-4 h-4" />
+              Within {distanceFilter} km
+            </button>
+            {showDistanceFilter && (
+              <div className="absolute right-0 top-full mt-1 bg-white border border-neutral-200 rounded-xl shadow-lg z-10 py-1 min-w-[120px]">
+                {DISTANCE_FILTERS.map((df) => (
+                  <button
+                    key={df.value}
+                    onClick={() => {
+                      setDistanceFilter(df.value)
+                      setShowDistanceFilter(false)
+                      // Re-run search with new filter
+                      handleSearch()
+                    }}
+                    className={`w-full px-4 py-2 text-left text-sm transition-colors ${
+                      distanceFilter === df.value
+                        ? 'bg-primary-100 text-primary-main font-medium'
+                        : 'text-neutral-700 hover:bg-neutral-50'
+                    }`}
+                  >
+                    {df.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Results List */}
@@ -138,6 +244,7 @@ export default function SearchPage() {
                 seatsNeeded={seatsNeeded}
                 onBook={() => handleBookRide(ride)}
                 isBooking={bookingRideId === ride.id}
+                isBooked={hasBookedRide(ride.id)}
               />
             ))}
           </div>
@@ -167,14 +274,20 @@ export default function SearchPage() {
           <LocationPicker
             placeholder="From: Pickup location"
             value={fromLocation}
-            onChange={(location) => setFromLocation(location)}
+            onChange={(location, coords) => {
+              setFromLocation(location)
+              setFromCoords(coords || null)
+            }}
             icon="pickup"
           />
 
           <LocationPicker
             placeholder="To: Drop location"
             value={toLocation}
-            onChange={(location) => setToLocation(location)}
+            onChange={(location, coords) => {
+              setToLocation(location)
+              setToCoords(coords || null)
+            }}
             icon="drop"
           />
 
@@ -285,11 +398,13 @@ function RideCard({
   seatsNeeded,
   onBook,
   isBooking,
+  isBooked,
 }: {
   ride: Ride
   seatsNeeded: number
   onBook: () => void
   isBooking: boolean
+  isBooked: boolean
 }) {
   const departureTime = new Date(ride.pickup_time).toLocaleTimeString('en-US', {
     hour: '2-digit',
@@ -350,9 +465,16 @@ function RideCard({
         </div>
       )}
 
-      <Button onClick={onBook} className="w-full" loading={isBooking}>
-        Book {seatsNeeded} Seat{seatsNeeded > 1 ? 's' : ''} • ₹{ride.price_per_seat * seatsNeeded}
-      </Button>
+      {isBooked ? (
+        <div className="w-full py-3 bg-green-100 text-green-700 rounded-xl font-medium flex items-center justify-center gap-2">
+          <CheckCircle className="w-5 h-5" />
+          Already Booked
+        </div>
+      ) : (
+        <Button onClick={onBook} className="w-full" loading={isBooking}>
+          Book {seatsNeeded} Seat{seatsNeeded > 1 ? 's' : ''} • ₹{ride.price_per_seat * seatsNeeded}
+        </Button>
+      )}
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Car, Ticket, Clock, RefreshCw } from 'lucide-react'
 import Button from '../components/ui/Button'
 import { Ride, RideBooking } from '../types'
@@ -7,7 +8,9 @@ import { ridesApi, bookingsApi } from '../services/api'
 type TabType = 'published' | 'booked'
 
 export default function MyRidesPage() {
-  const [activeTab, setActiveTab] = useState<TabType>('published')
+  const [searchParams] = useSearchParams()
+  const tabFromUrl = searchParams.get('tab') as TabType | null
+  const [activeTab, setActiveTab] = useState<TabType>(tabFromUrl === 'booked' ? 'booked' : 'published')
   const [publishedRides, setPublishedRides] = useState<Ride[]>([])
   const [bookedRides, setBookedRides] = useState<RideBooking[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -47,11 +50,12 @@ export default function MyRidesPage() {
     }
   }
 
-  const handleCancelBooking = async (bookingId: string) => {
+  const handleCancelBooking = async (booking: RideBooking) => {
     if (!confirm('Are you sure you want to cancel this booking?')) return
-    setCancellingId(bookingId)
+    setCancellingId(booking.id)
     try {
-      await bookingsApi.cancel(bookingId)
+      // Backend automatically sends cancellation notification to driver
+      await bookingsApi.cancel(booking.id)
       alert('Booking cancelled successfully')
       loadRides()
     } catch (error: any) {
@@ -173,7 +177,7 @@ export default function MyRidesPage() {
               <div className="flex justify-between items-center">
                 <span className="text-sm text-neutral-600">Total: ₹{booking.total_price}</span>
                 {booking.booking_status === 'confirmed' && (
-                  <Button variant="outline" size="small" onClick={() => handleCancelBooking(booking.id)} loading={cancellingId === booking.id}>
+                  <Button variant="outline" size="small" onClick={() => handleCancelBooking(booking)} loading={cancellingId === booking.id}>
                     Cancel
                   </Button>
                 )}
