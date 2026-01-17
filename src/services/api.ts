@@ -22,11 +22,12 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Handle 401/403 errors (invalid/expired token)
+// Handle 401/403 errors (invalid/expired token) - but not for auth endpoints
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
+    const isAuthEndpoint = error.config?.url?.includes('/auth/')
+    if ((error.response?.status === 401 || error.response?.status === 403) && !isAuthEndpoint) {
       localStorage.removeItem('poolo-auth')
       window.location.href = '/login'
     }
