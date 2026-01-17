@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Car, Users, Wallet, Leaf, MapPin, Shield, ChevronRight, Star } from 'lucide-react'
+import { Car, Users, Wallet, Leaf, MapPin, Shield, ChevronRight, Star, Smartphone, Bell, Zap, Check } from 'lucide-react'
 import Button from '../components/ui/Button'
 
 export default function LandingPage() {
@@ -144,8 +144,97 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* How it Works */}
+      {/* Mobile App Section */}
       <section className="py-20 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div className="text-center md:text-left">
+              <div className="inline-flex items-center gap-2 bg-primary-light text-primary-main px-4 py-2 rounded-full text-sm font-medium mb-4">
+                <Smartphone className="w-4 h-4" />
+                Mobile Experience
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-bold text-neutral-900 mb-4">
+                Better on Your Phone
+              </h2>
+              <p className="text-lg text-neutral-600 mb-6">
+                For the best Poolo experience, use our mobile-optimized web app. Add it to your home screen for quick access - no download required!
+              </p>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <MapPin className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-neutral-900">Real-time Location</h3>
+                    <p className="text-neutral-600 text-sm">Get accurate pickup points with GPS</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Bell className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-neutral-900">Instant Notifications</h3>
+                    <p className="text-neutral-600 text-sm">Never miss a ride update</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Zap className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-neutral-900">Lightning Fast</h3>
+                    <p className="text-neutral-600 text-sm">Optimized for mobile performance</p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-8 p-4 bg-neutral-50 rounded-xl border border-neutral-200">
+                <p className="text-sm text-neutral-600 mb-2"><strong>How to install:</strong></p>
+                <p className="text-sm text-neutral-500">Open this site on your phone browser → Tap Share → Add to Home Screen</p>
+              </div>
+            </div>
+            <div className="relative flex justify-center">
+              <div className="relative">
+                <div className="w-64 h-[500px] bg-neutral-900 rounded-[3rem] p-3 shadow-2xl">
+                  <div className="w-full h-full bg-white rounded-[2.5rem] overflow-hidden">
+                    <div className="bg-primary-main text-white p-4 pt-8">
+                      <div className="flex items-center gap-2 mb-2">
+                        <img src="/images/logo.png" alt="Poolo" className="h-6 w-auto" />
+                        <span className="font-bold">Poolo</span>
+                      </div>
+                      <p className="text-sm text-white/80">Find your ride</p>
+                    </div>
+                    <div className="p-4 space-y-3">
+                      <div className="bg-neutral-100 rounded-lg p-3">
+                        <div className="text-xs text-neutral-500 mb-1">From</div>
+                        <div className="text-sm font-medium">Bangalore</div>
+                      </div>
+                      <div className="bg-neutral-100 rounded-lg p-3">
+                        <div className="text-xs text-neutral-500 mb-1">To</div>
+                        <div className="text-sm font-medium">Chennai</div>
+                      </div>
+                      <div className="bg-primary-main text-white rounded-lg p-3 text-center text-sm font-medium">
+                        Search Rides
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="absolute -bottom-4 -right-4 bg-white rounded-xl shadow-lg p-3 animate-bounce-slow">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                      <Check className="w-4 h-4 text-green-600" />
+                    </div>
+                    <span className="text-sm font-medium">Works offline!</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How it Works */}
+      <section className="py-20 px-4 bg-neutral-50">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-neutral-900 mb-4">
@@ -262,24 +351,24 @@ export default function LandingPage() {
             <div>
               <h4 className="font-semibold mb-4">Product</h4>
               <ul className="space-y-2 text-sm text-neutral-400">
-                <li><a href="#" className="hover:text-white transition-colors">How it works</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Features</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Pricing</a></li>
+                <li><Link to="/how-it-works" className="hover:text-white transition-colors">How it works</Link></li>
+                <li><Link to="/features" className="hover:text-white transition-colors">Features</Link></li>
+                <li><Link to="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold mb-4">Company</h4>
               <ul className="space-y-2 text-sm text-neutral-400">
-                <li><a href="#" className="hover:text-white transition-colors">About us</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
+                <li><Link to="/about" className="hover:text-white transition-colors">About us</Link></li>
+                <li><Link to="/careers" className="hover:text-white transition-colors">Careers</Link></li>
+                <li><Link to="/contact" className="hover:text-white transition-colors">Contact</Link></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold mb-4">Legal</h4>
               <ul className="space-y-2 text-sm text-neutral-400">
-                <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
+                <li><Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+                <li><Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
               </ul>
             </div>
           </div>
