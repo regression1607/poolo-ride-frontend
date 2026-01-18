@@ -52,7 +52,7 @@ export default function SearchPage() {
   const [selectedDate, setSelectedDate] = useState<'today' | 'tomorrow'>('today')
   const [seatsNeeded, setSeatsNeeded] = useState(1)
   const [vehicleType, setVehicleType] = useState<VehicleType | 'all'>('all')
-  const [distanceFilter, setDistanceFilter] = useState(10) // Default 10km
+  const [distanceFilter, setDistanceFilter] = useState(50) // Default 10km
   const [searchResults, setSearchResults] = useState<Ride[]>([])
   const [showResults, setShowResults] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
