@@ -7,6 +7,7 @@ import { Mail, Lock, Eye, EyeOff, User, Phone, AtSign } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
+import SEO from '../components/SEO'
 
 const schema = yup.object({
   name: yup.string().min(2, 'Name must be at least 2 characters').required('Name is required'),
@@ -56,6 +57,11 @@ export default function RegisterPage() {
       className="min-h-screen flex items-center justify-center p-4 bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: 'linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.5)), url(/images/bg-register.jpg)' }}
     >
+      <SEO 
+        title="Register"
+        description="Join Poolo - India's smart carpooling platform. Create your free account and start saving on daily commute."
+        keywords="register poolo, join carpool, sign up ride sharing, create account"
+      />
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-6">

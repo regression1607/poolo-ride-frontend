@@ -1,16 +1,30 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Mail, Phone, MapPin, Send } from 'lucide-react'
+import { ArrowLeft, Mail, Phone, MapPin, Send, Loader2 } from 'lucide-react'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
+import { contactApi } from '../services/api'
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '' })
   const [submitted, setSubmitted] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
+    setIsLoading(true)
+    setError('')
+    
+    try {
+      await contactApi.send(formData)
+      setSubmitted(true)
+      setFormData({ name: '', email: '', subject: '', message: '' })
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to send message. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -82,12 +96,18 @@ export default function ContactPage() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
+                {error && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                    {error}
+                  </div>
+                )}
                 <Input
                   label="Name"
                   placeholder="Your name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
+                  disabled={isLoading}
                 />
                 <Input
                   label="Email"
@@ -96,6 +116,7 @@ export default function ContactPage() {
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
+                  disabled={isLoading}
                 />
                 <Input
                   label="Subject"
@@ -103,20 +124,29 @@ export default function ContactPage() {
                   value={formData.subject}
                   onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                   required
+                  disabled={isLoading}
                 />
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 mb-1">Message</label>
                   <textarea
-                    className="w-full px-4 py-3 rounded-lg border border-neutral-300 focus:border-primary-main focus:ring-2 focus:ring-primary-main/20 outline-none transition-all resize-none"
+                    className="w-full px-4 py-3 rounded-lg border border-neutral-300 focus:border-primary-main focus:ring-2 focus:ring-primary-main/20 outline-none transition-all resize-none disabled:bg-neutral-100"
                     rows={5}
                     placeholder="Your message..."
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                     required
+                    disabled={isLoading}
                   />
                 </div>
-                <Button type="submit" className="w-full" size="large">
-                  Send Message
+                <Button type="submit" className="w-full" size="large" disabled={isLoading}>
+                  {isLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Sending...
+                    </span>
+                  ) : (
+                    'Send Message'
+                  )}
                 </Button>
               </form>
             )}

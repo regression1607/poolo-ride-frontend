@@ -4,6 +4,7 @@ import { MapPin, Car, Bike, Truck, IndianRupee, FileText, ChevronLeft, ChevronRi
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import LocationPicker from '../components/LocationPicker'
+import SEO from '../components/SEO'
 import { VehicleType } from '../types'
 import { ridesApi } from '../services/api'
 
@@ -430,6 +431,11 @@ export default function PublishPage() {
 
   return (
     <div className="max-w-lg mx-auto">
+      <SEO 
+        title="Publish a Ride"
+        description="Publish your ride and find co-passengers. Share travel costs and make your commute affordable with Poolo carpooling."
+        keywords="publish ride, offer ride, share ride, carpool driver, find passengers, Delhi NCR carpool"
+      />
       {/* Progress Header */}
       <div className="flex items-center justify-between mb-4">
         <button

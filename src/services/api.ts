@@ -140,4 +140,12 @@ export const messagesApi = {
   },
 }
 
+// Contact API
+export const contactApi = {
+  send: async (data: { name: string; email: string; subject: string; message: string }): Promise<{ message: string }> => {
+    const response = await api.post('/contact', data)
+    return response.data
+  },
+}
+
 export default api

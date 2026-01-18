@@ -7,6 +7,7 @@ import { Mail, Lock, Eye, EyeOff, Users, Wallet, Leaf } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
+import SEO from '../components/SEO'
 
 const schema = yup.object({
   email: yup.string().email('Invalid email format').required('Email is required'),
@@ -43,6 +44,11 @@ export default function LoginPage() {
       className="min-h-screen flex items-center justify-center p-4 bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: 'linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.5)), url(/images/bg-login.jpg)' }}
     >
+      <SEO 
+        title="Login"
+        description="Login to Poolo to find and share rides. Access your bookings, messages, and ride history."
+        keywords="login poolo, carpool login, ride sharing login"
+      />
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Car, Users, Wallet, Leaf, MapPin, Shield, ChevronRight, Star, Smartphone, Bell, Zap, Check, Info, X } from 'lucide-react'
 import Button from '../components/ui/Button'
+import SEO from '../components/SEO'
 
 // Version from env (set VITE_APP_VERSION in .env)
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || '1.0.0'
@@ -25,6 +26,11 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white overflow-hidden">
+      <SEO 
+        title="Share Rides, Save Money"
+        description="Poolo is India's smart carpooling platform. Find and share rides in Delhi, Noida, Gurgaon, Faridabad. Save up to 70% on daily commute costs. Safe, affordable, eco-friendly."
+        keywords="carpooling, ride sharing, poolo, Delhi carpool, Noida carpool, Gurgaon carpool, Faridabad carpool, share ride, daily commute, office carpool, bike pooling, cab sharing"
+      />
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-neutral-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Search, Car, Bike, Truck, Star, Clock, CheckCircle, Filter } from 'lucide-react'
 import Button from '../components/ui/Button'
 import LocationPicker from '../components/LocationPicker'
+import SEO from '../components/SEO'
 import { Ride, VehicleType, RideBooking } from '../types'
 import { ridesApi, bookingsApi } from '../services/api'
 import { useAuthStore } from '../store/authStore'
@@ -273,6 +274,10 @@ export default function SearchPage() {
   if (showResults) {
     return (
       <div>
+        <SEO 
+          title="Search Results"
+          description="Find available carpool rides in Delhi NCR. Compare prices, ratings, and book your ride instantly."
+        />
         {/* Results Header */}
         <div className="bg-white rounded-xl p-4 mb-4 shadow-card">
           <div className="flex items-center justify-between">
@@ -365,6 +370,11 @@ export default function SearchPage() {
 
   return (
     <div>
+      <SEO 
+        title="Search Rides"
+        description="Search and book carpool rides in Delhi, Noida, Gurgaon, Faridabad. Save up to 70% on travel costs with Poolo carpooling."
+        keywords="search rides, find carpool, book ride, Delhi to Noida, Gurgaon carpool, Faridabad rides"
+      />
       {/* Welcome Section */}
       <div className="text-center mb-6">
         <h1 className="text-2xl font-bold text-neutral-900 mb-2">Find your perfect ride</h1>
