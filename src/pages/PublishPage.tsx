@@ -41,7 +41,9 @@ export default function PublishPage() {
 
   const [formData, setFormData] = useState({
     fromLocation: '',
+    fromCoords: null as { lat: number; lng: number } | null,
     toLocation: '',
+    toCoords: null as { lat: number; lng: number } | null,
     selectedDate: 'today' as 'today' | 'tomorrow',
     hour: initialTime.hour,
     minute: initialTime.minute,
@@ -155,6 +157,10 @@ export default function PublishPage() {
         vehicle_type: formData.vehicleType,
         price_per_seat: Number(formData.pricePerSeat),
         description: formData.description,
+        pickup_latitude: formData.fromCoords?.lat,
+        pickup_longitude: formData.fromCoords?.lng,
+        drop_latitude: formData.toCoords?.lat,
+        drop_longitude: formData.toCoords?.lng,
       })
       alert('Ride published successfully!')
       navigate('/rides')
@@ -178,14 +184,20 @@ export default function PublishPage() {
             <LocationPicker
               placeholder="From: Your starting point"
               value={formData.fromLocation}
-              onChange={(location) => updateFormData('fromLocation', location)}
+              onChange={(location, coords) => {
+                updateFormData('fromLocation', location)
+                updateFormData('fromCoords', coords || null)
+              }}
               icon="pickup"
             />
 
             <LocationPicker
               placeholder="To: Your destination"
               value={formData.toLocation}
-              onChange={(location) => updateFormData('toLocation', location)}
+              onChange={(location, coords) => {
+                updateFormData('toLocation', location)
+                updateFormData('toCoords', coords || null)
+              }}
               icon="drop"
             />
 
