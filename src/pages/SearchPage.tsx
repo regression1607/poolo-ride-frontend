@@ -52,7 +52,7 @@ export default function SearchPage() {
   const [selectedDate, setSelectedDate] = useState<'today' | 'tomorrow'>('today')
   const [seatsNeeded, setSeatsNeeded] = useState(1)
   const [vehicleType, setVehicleType] = useState<VehicleType | 'all'>('all')
-  const [distanceFilter, setDistanceFilter] = useState(5) // Default 5km
+  const [distanceFilter, setDistanceFilter] = useState(10) // Default 10km
   const [searchResults, setSearchResults] = useState<Ride[]>([])
   const [showResults, setShowResults] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -113,6 +113,25 @@ export default function SearchPage() {
             ride.drop_latitude, ride.drop_longitude
           )
           matchesDrop = dropDistance <= distanceFilter
+          
+          // Also check if passenger's drop location is along the driver's route
+          if (!matchesDrop && fromCoords && ride.pickup_latitude && ride.pickup_longitude) {
+            const rideStart = { lat: ride.pickup_latitude, lng: ride.pickup_longitude }
+            const rideEnd = { lat: ride.drop_latitude, lng: ride.drop_longitude }
+            const passengerDrop = { lat: toCoords.lat, lng: toCoords.lng }
+            
+            // Check if passenger drop is along the route
+            const totalRouteDistance = getDistanceKm(
+              rideStart.lat, rideStart.lng,
+              rideEnd.lat, rideEnd.lng
+            )
+            const distanceToPassengerDrop = 
+              getDistanceKm(rideStart.lat, rideStart.lng, passengerDrop.lat, passengerDrop.lng) +
+              getDistanceKm(passengerDrop.lat, passengerDrop.lng, rideEnd.lat, rideEnd.lng)
+            
+            // If passenger drop is along the route (within 20% deviation)
+            matchesDrop = distanceToPassengerDrop <= totalRouteDistance * 1.2
+          }
         } else {
           // Fallback to text matching
           matchesDrop = ride.drop_address.toLowerCase().includes(toLocation.toLowerCase().split(',')[0])

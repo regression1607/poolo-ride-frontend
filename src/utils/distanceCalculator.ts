@@ -51,7 +51,26 @@ export function isPointNearRoute(
   const distanceFromStart = calculateDistance(point, routeStart);
   const distanceFromEnd = calculateDistance(point, routeEnd);
   
-  return distanceFromStart <= maxDistanceKm || distanceFromEnd <= maxDistanceKm;
+  // Check if point is near start or end
+  if (distanceFromStart <= maxDistanceKm || distanceFromEnd <= maxDistanceKm) {
+    return true;
+  }
+  
+  // Check if point lies along the route (perpendicular distance to route line)
+  const totalRouteDistance = calculateDistance(routeStart, routeEnd);
+  
+  // If route is very short, just check endpoints
+  if (totalRouteDistance < 1) {
+    return false;
+  }
+  
+  // Calculate if point is between start and end (roughly)
+  const distanceToPoint = distanceFromStart + distanceFromEnd;
+  
+  // If sum of distances from point to start and end is close to total route distance,
+  // then point lies roughly on the route
+  // Allow 20% deviation to account for road curves
+  return distanceToPoint <= totalRouteDistance * 1.2;
 }
 
 export function calculateRouteMatch(
