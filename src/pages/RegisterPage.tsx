@@ -16,7 +16,7 @@ const schema = yup.object({
     .matches(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores')
     .required('Username is required'),
   email: yup.string().email('Invalid email format').required('Email is required'),
-  phone_number: yup.string().optional(),
+  phone_number: yup.string().required('Phone number is required'),
   password: yup.string().min(6, 'Password must be at least 6 characters').required('Password is required'),
   confirmPassword: yup
     .string()
@@ -103,7 +103,7 @@ export default function RegisterPage() {
             />
 
             <Input
-              label="Phone Number (Optional)"
+              label="Phone Number"
               type="tel"
               placeholder="Enter your phone number"
               leftIcon={Phone}
