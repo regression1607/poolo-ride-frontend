@@ -29,6 +29,100 @@ function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): 
   return R * c
 }
 
+// Check if a point lies along a route (between start and end)
+// Returns true if the point is roughly on the path from start to end
+function isPointAlongRoute(
+  point: { lat: number; lng: number },
+  routeStart: { lat: number; lng: number },
+  routeEnd: { lat: number; lng: number },
+  tolerancePercent: number = 30 // Allow 30% extra distance for road curves
+): boolean {
+  const totalRouteDistance = getDistanceKm(routeStart.lat, routeStart.lng, routeEnd.lat, routeEnd.lng)
+  
+  // If route is very short (< 1km), just check if point is near either end
+  if (totalRouteDistance < 1) {
+    const distFromStart = getDistanceKm(point.lat, point.lng, routeStart.lat, routeStart.lng)
+    const distFromEnd = getDistanceKm(point.lat, point.lng, routeEnd.lat, routeEnd.lng)
+    return distFromStart <= 2 || distFromEnd <= 2
+  }
+  
+  const distanceViaPoint = 
+    getDistanceKm(routeStart.lat, routeStart.lng, point.lat, point.lng) +
+    getDistanceKm(point.lat, point.lng, routeEnd.lat, routeEnd.lng)
+  
+  // Point is on route if going via this point doesn't add much extra distance
+  return distanceViaPoint <= totalRouteDistance * (1 + tolerancePercent / 100)
+}
+
+// Check if passenger's journey can be served by driver's journey
+// Returns match type and score
+function checkRideMatch(
+  passengerPickup: { lat: number; lng: number } | null,
+  passengerDrop: { lat: number; lng: number } | null,
+  driverPickup: { lat: number; lng: number } | null,
+  driverDrop: { lat: number; lng: number } | null,
+  maxDistanceKm: number
+): { matches: boolean; matchType: string; score: number } {
+  // If no coordinates available, can't do geo matching
+  if (!passengerPickup || !passengerDrop || !driverPickup || !driverDrop) {
+    return { matches: false, matchType: 'no_coords', score: 0 }
+  }
+
+  const pickupDistance = getDistanceKm(passengerPickup.lat, passengerPickup.lng, driverPickup.lat, driverPickup.lng)
+  const dropDistance = getDistanceKm(passengerDrop.lat, passengerDrop.lng, driverDrop.lat, driverDrop.lng)
+
+  // Case 1: EXACT MATCH - Both pickup and drop are within distance filter
+  if (pickupDistance <= maxDistanceKm && dropDistance <= maxDistanceKm) {
+    const avgDist = (pickupDistance + dropDistance) / 2
+    const score = Math.max(0, 100 - avgDist * 2)
+    return { matches: true, matchType: 'exact', score }
+  }
+
+  // Case 2: PICKUP MATCHES, DROP IS ALONG ROUTE
+  // Passenger pickup is close, and their drop is somewhere along driver's route
+  if (pickupDistance <= maxDistanceKm) {
+    const dropAlongRoute = isPointAlongRoute(passengerDrop, driverPickup, driverDrop)
+    if (dropAlongRoute) {
+      const score = Math.max(0, 85 - pickupDistance * 2)
+      return { matches: true, matchType: 'drop_along_route', score }
+    }
+  }
+
+  // Case 3: DROP MATCHES, PICKUP IS ALONG ROUTE  
+  // Passenger drop is close, and driver can pick them up along the way
+  if (dropDistance <= maxDistanceKm) {
+    const pickupAlongRoute = isPointAlongRoute(passengerPickup, driverPickup, driverDrop)
+    if (pickupAlongRoute) {
+      const score = Math.max(0, 80 - dropDistance * 2)
+      return { matches: true, matchType: 'pickup_along_route', score }
+    }
+  }
+
+  // Case 4: BOTH ALONG ROUTE (subset journey)
+  // Passenger's entire journey is within driver's route
+  const pickupAlongRoute = isPointAlongRoute(passengerPickup, driverPickup, driverDrop)
+  const dropAlongRoute = isPointAlongRoute(passengerDrop, driverPickup, driverDrop)
+  
+  if (pickupAlongRoute && dropAlongRoute) {
+    // Also verify passenger drop is AFTER pickup in the route direction
+    const driverPickupToPassengerPickup = getDistanceKm(driverPickup.lat, driverPickup.lng, passengerPickup.lat, passengerPickup.lng)
+    const driverPickupToPassengerDrop = getDistanceKm(driverPickup.lat, driverPickup.lng, passengerDrop.lat, passengerDrop.lng)
+    
+    // Passenger drop should be further from driver start than passenger pickup
+    if (driverPickupToPassengerDrop >= driverPickupToPassengerPickup) {
+      return { matches: true, matchType: 'subset_journey', score: 75 }
+    }
+  }
+
+  // Case 5: NEARBY PICKUP ONLY - pickup is close but drop is far
+  // Still show but with lower score (passenger might negotiate)
+  if (pickupDistance <= maxDistanceKm * 1.5) {
+    return { matches: true, matchType: 'nearby_pickup', score: 40 }
+  }
+
+  return { matches: false, matchType: 'no_match', score: 0 }
+}
+
 const vehicleTypes: { type: VehicleType | 'all'; label: string; icon: any }[] = [
   { type: 'all', label: 'All', icon: Car },
   { type: 'bike', label: 'Bike', icon: Bike },
@@ -87,60 +181,57 @@ export default function SearchPage() {
     try {
       const rides = await ridesApi.getAvailable()
       
-      // Filter rides based on criteria
-      const filtered = rides.filter((ride) => {
-        const matchesVehicle = vehicleType === 'all' || ride.vehicle_type === vehicleType
-        const matchesSeats = ride.available_seats >= seatsNeeded
-        
-        // Distance-based filtering if coordinates available
-        let matchesPickup = true
-        let matchesDrop = true
-        
-        if (fromCoords && ride.pickup_latitude && ride.pickup_longitude) {
-          const pickupDistance = getDistanceKm(
-            fromCoords.lat, fromCoords.lng,
-            ride.pickup_latitude, ride.pickup_longitude
-          )
-          matchesPickup = pickupDistance <= distanceFilter
-        } else {
-          // Fallback to text matching
-          matchesPickup = ride.pickup_address.toLowerCase().includes(fromLocation.toLowerCase().split(',')[0])
-        }
-        
-        if (toCoords && ride.drop_latitude && ride.drop_longitude) {
-          const dropDistance = getDistanceKm(
-            toCoords.lat, toCoords.lng,
-            ride.drop_latitude, ride.drop_longitude
-          )
-          matchesDrop = dropDistance <= distanceFilter
+      // Filter and score rides based on criteria
+      const matchedRides = rides
+        .map((ride) => {
+          const matchesVehicle = vehicleType === 'all' || ride.vehicle_type === vehicleType
+          const matchesSeats = ride.available_seats >= seatsNeeded
           
-          // Also check if passenger's drop location is along the driver's route
-          if (!matchesDrop && fromCoords && ride.pickup_latitude && ride.pickup_longitude) {
-            const rideStart = { lat: ride.pickup_latitude, lng: ride.pickup_longitude }
-            const rideEnd = { lat: ride.drop_latitude, lng: ride.drop_longitude }
-            const passengerDrop = { lat: toCoords.lat, lng: toCoords.lng }
-            
-            // Check if passenger drop is along the route
-            const totalRouteDistance = getDistanceKm(
-              rideStart.lat, rideStart.lng,
-              rideEnd.lat, rideEnd.lng
-            )
-            const distanceToPassengerDrop = 
-              getDistanceKm(rideStart.lat, rideStart.lng, passengerDrop.lat, passengerDrop.lng) +
-              getDistanceKm(passengerDrop.lat, passengerDrop.lng, rideEnd.lat, rideEnd.lng)
-            
-            // If passenger drop is along the route (within 20% deviation)
-            matchesDrop = distanceToPassengerDrop <= totalRouteDistance * 1.2
+          if (!matchesVehicle || !matchesSeats) {
+            return { ride, matches: false, matchType: 'filter_fail', score: 0 }
           }
-        } else {
-          // Fallback to text matching
-          matchesDrop = ride.drop_address.toLowerCase().includes(toLocation.toLowerCase().split(',')[0])
-        }
-        
-        return matchesVehicle && matchesSeats && matchesPickup && matchesDrop
-      })
+
+          // Prepare coordinates
+          const passengerPickup = fromCoords
+          const passengerDrop = toCoords
+          const driverPickup = (ride.pickup_latitude && ride.pickup_longitude) 
+            ? { lat: ride.pickup_latitude, lng: ride.pickup_longitude } 
+            : null
+          const driverDrop = (ride.drop_latitude && ride.drop_longitude)
+            ? { lat: ride.drop_latitude, lng: ride.drop_longitude }
+            : null
+
+          // Use comprehensive matching if coordinates available
+          if (passengerPickup && passengerDrop && driverPickup && driverDrop) {
+            const matchResult = checkRideMatch(
+              passengerPickup,
+              passengerDrop,
+              driverPickup,
+              driverDrop,
+              distanceFilter
+            )
+            return { ride, ...matchResult }
+          }
+          
+          // Fallback to text matching if no coordinates
+          const pickupText = fromLocation.toLowerCase().split(',')[0].trim()
+          const dropText = toLocation.toLowerCase().split(',')[0].trim()
+          const matchesPickup = ride.pickup_address.toLowerCase().includes(pickupText)
+          const matchesDrop = ride.drop_address.toLowerCase().includes(dropText)
+          
+          if (matchesPickup && matchesDrop) {
+            return { ride, matches: true, matchType: 'text_match', score: 50 }
+          } else if (matchesPickup) {
+            return { ride, matches: true, matchType: 'text_pickup_only', score: 30 }
+          }
+          
+          return { ride, matches: false, matchType: 'no_match', score: 0 }
+        })
+        .filter((result) => result.matches)
+        .sort((a, b) => b.score - a.score) // Sort by score descending
+        .map((result) => result.ride)
       
-      setSearchResults(filtered)
+      setSearchResults(matchedRides)
       setShowResults(true)
     } catch (error) {
       console.error('Search failed:', error)
